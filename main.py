@@ -55,7 +55,7 @@ DSN = f'postgresql://{LOGIN_DB}:{PSW_DB}@{HOST_DB}/{NAME_DB}'
 engine = sq.create_engine(DSN)
 
 # Удаляю ранее созданные таблицы с данными
-# delete_tables(engine)
+delete_tables(engine)
 
 # Создаю таблицы из models.py
 create_tables(engine)
@@ -69,21 +69,35 @@ fill_database()
 
 # Получаю список авторов из таблицы Publisher
 authors = []
-for a in session.query(Publisher.name).all(): authors.append(*a)
+for a in session.query(Publisher.id ,Publisher.name).all(): authors.append(a)
+
+# Формирую список для проверки while
+list_authors = []
+for key in authors:
+    list_authors.append(f'{key[0]}')
+    list_authors.append(key[1])
 
 # Запрашиваю для какого автора вывести информацию
-request_author = ''
-while request_author not in authors:
-    request_author = input(f'Введите имя автора\nВарианты: {authors}: ')
+request_author = '@'
+while request_author not in list_authors:
+    request_author = input(f'Введите имя или id автора\nВарианты: {authors}: ')
+
 
 # Формирую и делаю запрос в БД
-query = session.query(Book.title, Shop.name, Sale.price, Sale.date_sale).\
+body = session.query(Book.title, Shop.name, Sale.price, Sale.date_sale).\
         join(Publisher).\
         join(Stock).\
         join(Shop).\
-        join(Sale).\
-        filter(Publisher.name == request_author).\
-        order_by(Sale.date_sale.desc()).all()
+        join(Sale)
+
+# Если пользователь указал id писателя
+if request_author.isdigit():
+    query = body.filter(Publisher.id == request_author).\
+            order_by(Sale.date_sale.desc()).all()
+#Если пользователь указал имя писателя
+else:
+    query = body.filter(Publisher.name == request_author).\
+            order_by(Sale.date_sale.desc()).all()
 
 # Вывод результатов
 print("{:<20}| {:<15}| {:<6}| {}".format('Название', 'Магазин', 'Цена', 'Дата'))
